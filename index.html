@@ -164,6 +164,28 @@ section[hidden]{display:none}
 </head>
 <body>
 <div class="wrap">
+<div id="diag"></div>
+<script>
+/* Runs before everything else. If the main script dies, this paints the
+   reason onto the page so it can be read from a screenshot, since there
+   is no console on her phone. */
+window.onerror = function(msg, src, line, col){
+  var d = document.getElementById("diag");
+  if(!d) return false;
+  d.style.cssText = "border:2px solid #C4462F;background:#fff;padding:12px;"+
+    "margin:14px 0;font-size:12px;line-height:1.7;word-break:break-all";
+  d.textContent = "ERROR: " + msg + "  (line " + line + ":" + col + ")";
+  var i = document.createElement("div");
+  i.style.cssText = "margin-top:10px;color:#6B7A72";
+  i.textContent =
+    "speech:" + (typeof window.speechSynthesis !== "undefined") +
+    " | store:" + (function(){ try{ localStorage.setItem("t","1"); return true; }
+                              catch(e){ return false; } })() +
+    " | " + navigator.userAgent;
+  d.appendChild(i);
+  return false;
+};
+</script>
 
 <header>
   <h1><span>あ</span>あおさんの練習</h1>
@@ -300,7 +322,11 @@ const store = {
 let S = store.get("ao-progress") || { seen:{}, days:[], total:0, right:0 };
 const save = ()=>store.set("ao-progress", S);
 
-const today = ()=>new Date().toLocaleDateString("sv");   // YYYY-MM-DD, local time
+function ymd(d){
+  const m = d.getMonth()+1, day = d.getDate();
+  return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(day<10?"0":"")+day;
+}
+const today = ()=>ymd(new Date());
 function markToday(){
   const t = today();
   if(S.days[S.days.length-1] !== t){ S.days.push(t); S.days = S.days.slice(-400); save(); }
@@ -309,15 +335,17 @@ function streak(){
   let n = 0;
   const d = new Date();
   for(;;){
-    const key = d.toLocaleDateString("sv");
-    if(S.days.includes(key)) n++;
+    const key = ymd(d);
+    if(S.days.indexOf(key) > -1) n++;
     else if(n > 0 || key !== today()) break;
     d.setDate(d.getDate()-1);
     if(n > 399) break;
   }
   return n;
 }
-const learned = ()=>Object.values(S.seen).filter(r=>r.w<=1 && r.n>=2).length;
+const learned = ()=>Object.keys(S.seen).filter(k=>{
+  const r = S.seen[k]; return r.w<=1 && r.n>=2;
+}).length;
 
 function drawStats(){
   const total = SAFE.length + SENTENCES.length;
@@ -350,28 +378,40 @@ function record(key, right){
 /* ============================================================
    SPEECH — browser built-in, no API key, works on GitHub Pages
    ============================================================ */
+const HAS_SPEECH = (typeof window.speechSynthesis !== "undefined") &&
+                   (typeof window.SpeechSynthesisUtterance !== "undefined");
 let voice = null;
+
 function pickVoice(){
-  const vs = speechSynthesis.getVoices().filter(v=>v.lang.startsWith("en"));
-  voice = vs.find(v=>/Samantha|Karen|Daniel|Google US/.test(v.name))
-       || vs.find(v=>v.lang==="en-US") || vs[0] || null;
+  if(!HAS_SPEECH) return;
+  try{
+    const vs = speechSynthesis.getVoices().filter(v=>v.lang.indexOf("en") === 0);
+    voice = vs.find(v=>/Samantha|Karen|Daniel|Google US/.test(v.name))
+         || vs.find(v=>v.lang === "en-US") || vs[0] || null;
+  }catch(e){}
 }
 pickVoice();
-speechSynthesis.onvoiceschanged = pickVoice;
+if(HAS_SPEECH){
+  try{ speechSynthesis.onvoiceschanged = pickVoice; }catch(e){}
+}
 
 function say(text, rate){
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "en-US";
-  u.rate = rate || 0.85;
-  if(voice) u.voice = voice;
-  speechSynthesis.speak(u);
+  if(!HAS_SPEECH) return;
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US";
+    u.rate = rate || 0.85;
+    if(voice) u.voice = voice;
+    speechSynthesis.speak(u);
+  }catch(e){}
 }
 
 /* ============================================================
    HELPERS
    ============================================================ */
 const el = (t,c,x)=>{const n=document.createElement(t); if(c)n.className=c; if(x!=null)n.textContent=x; return n;};
+const toArr = c => Array.prototype.slice.call(c);
 const shuffle = a => a.map(v=>[Math.random(),v]).sort((p,q)=>p[0]-q[0]).map(p=>p[1]);
 const sample  = (a,n,not) => shuffle(a.filter(x=>x!==not)).slice(0,n);
 function sayBtn(text,label,rate,cls){
@@ -586,9 +626,9 @@ function optionList(q){
     const b = el("button","tap en",opt);
     b.onclick = ()=>{
       const right = opt === q.answer;
-      [...box.children].forEach(c=>c.disabled = true);
+      toArr(box.children).forEach(c=>c.disabled = true);
       b.classList.add(right ? "right" : "wrong");
-      if(!right) [...box.children].forEach(c=>{ if(c.textContent===q.answer) c.classList.add("right"); });
+      if(!right) toArr(box.children).forEach(c=>{ if(c.textContent===q.answer) c.classList.add("right"); });
       finish(q, right, q.kind==="count" ? null : q.answer, box.parentElement);
     };
     box.appendChild(b);
@@ -626,8 +666,8 @@ function orderWidget(q, card){
   check.onclick = ()=>{
     const made = built.join(" ") + punct;
     const right = made.toLowerCase() === q.answer.toLowerCase();
-    [...line.children].forEach(c=>c.disabled=true);
-    [...pool.children].forEach(c=>c.classList.add("used"));
+    toArr(line.children).forEach(c=>c.disabled=true);
+    toArr(pool.children).forEach(c=>c.classList.add("used"));
     check.remove();
     finish(q, right, q.answer, holder);
   };
@@ -662,7 +702,7 @@ function finish(q, right, correctText, host){
 /* ============================================================
    TABS
    ============================================================ */
-const tabs = [...document.querySelectorAll("nav button")];
+const tabs = toArr(document.querySelectorAll("nav button"));
 tabs.forEach(t=>{
   t.onclick = ()=>{
     tabs.forEach(o=>o.setAttribute("aria-selected", String(o===t)));
@@ -704,11 +744,10 @@ window.addEventListener("beforeinstallprompt", e=>{
     "ホーム画面に入れましょう",
     "下のボタンを押すと、このアプリがホーム画面に置かれます。次からはそのアイコンを押すだけです。",
     "ホーム画面に入れる",
-    async (n)=>{
+    function(n){
       n.remove();
       installEvent.prompt();
-      await installEvent.userChoice;
-      installEvent = null;
+      installEvent.userChoice.then(function(){ installEvent = null; });
     });
 });
 
@@ -721,16 +760,24 @@ if("serviceWorker" in navigator && location.protocol === "https:"){
 let voiceChecked = false;
 function checkVoice(){
   if(voiceChecked) return;
+  if(!HAS_SPEECH){
+    voiceChecked = true;
+    showNotice(null, "音が出ないかもしれません",
+      "この画面では英語の音声が使えません。Chrome で開いてみてください。", null, null);
+    return;
+  }
   const list = speechSynthesis.getVoices();
   if(!list.length) return;                       // not loaded yet
   voiceChecked = true;
-  if(list.some(v=>v.lang.startsWith("en"))) return;
+  if(list.some(v=>v.lang.indexOf("en") === 0)) return;
   showNotice(null,
     "英語の音声が入っていません",
     "設定 → ユーザー補助 → テキスト読み上げの設定 → Google テキスト読み上げエンジン → 言語データのインストール → English を入れてください。",
     null, null);
 }
-speechSynthesis.addEventListener("voiceschanged", ()=>{ pickVoice(); checkVoice(); });
+if(HAS_SPEECH){
+  try{ speechSynthesis.addEventListener("voiceschanged", ()=>{ pickVoice(); checkVoice(); }); }catch(e){}
+}
 setTimeout(checkVoice, 2000);
 
 markToday();

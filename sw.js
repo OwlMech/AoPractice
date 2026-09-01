@@ -1,6 +1,6 @@
 /* Offline cache. Bump CACHE when you edit index.html so her phone
    picks up the new version instead of the old cached one. */
-const CACHE = "ao-v1";
+const CACHE = "ao-v2";
 const FILES = ["./", "./index.html", "./manifest.json", "./icon.png", "./icon-192.png"];
 
 self.addEventListener("install", e=>{
