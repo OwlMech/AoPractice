@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>あおさんの練習</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="あおさんの練習">
+<meta name="theme-color" content="#FBFAF5">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   えいご れんしゅう  —  English practice for an absolute beginner
+   Everything editable lives in the DATA block in the <script>.
+   Interface language is Japanese on purpose: she must never need
+   English to operate the app that teaches her English.
+   ============================================================ */
+
+:root{
+  --paper:#FBFAF5;
+  --ink:#1B2A21;
+  --rule:#6E9E86;        /* the printed green of 原稿用紙 */
+  --rule-soft:#6E9E8622;
+  --shu:#C4462F;         /* 朱色 — the correction pen */
+  --ok:#2E7D5B;
+  --slot:#F2DFA0;
+  --dim:#6B7A72;
+  --box:56px;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  background-image:
+    linear-gradient(var(--rule-soft) 1px,transparent 1px),
+    linear-gradient(90deg,var(--rule-soft) 1px,transparent 1px);
+  background-size:28px 28px;
+  color:var(--ink);
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",sans-serif;
+  -webkit-text-size-adjust:100%;
+  padding:0 0 96px;
+}
+.en{font-family:"Lexend",system-ui,sans-serif;letter-spacing:.01em}
+
+.wrap{max-width:460px;margin:0 auto;padding:0 16px}
+
+header{padding:22px 0 14px}
+h1{
+  font-size:19px;font-weight:600;margin:0;letter-spacing:.14em;
+  display:flex;align-items:center;gap:10px;
+}
+h1 span{
+  display:inline-grid;place-items:center;
+  width:30px;height:30px;border:1.5px solid var(--rule);
+  font-size:15px;color:var(--rule);
+}
+.sub{font-size:12.5px;color:var(--dim);margin:6px 0 0;line-height:1.6}
+
+/* tabs as manuscript boxes */
+nav{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:16px 0 20px}
+nav button{
+  font:inherit;font-size:13px;padding:11px 2px;cursor:pointer;
+  background:transparent;color:var(--dim);
+  border:1.5px solid var(--rule-soft);border-radius:0;
+}
+nav button[aria-selected="true"]{
+  background:var(--ink);color:var(--paper);border-color:var(--ink);
+}
+nav button:focus-visible,.tap:focus-visible,.say:focus-visible{outline:2.5px solid var(--shu);outline-offset:2px}
+
+section[hidden]{display:none}
+
+.card{
+  border:1.5px solid var(--rule);background:var(--paper);
+  padding:16px;margin-bottom:10px;
+}
+.jp{font-size:15px;line-height:1.5}
+.gloss{font-size:12.5px;color:var(--dim);margin-top:5px}
+.word{font-size:26px;font-weight:500}
+
+.say{
+  border:1.5px solid var(--ink);background:transparent;color:var(--ink);
+  font:inherit;font-size:13px;padding:8px 14px;cursor:pointer;border-radius:0;
+}
+.say:active{background:var(--ink);color:var(--paper)}
+.say.slow{border-style:dashed;color:var(--dim);border-color:var(--dim)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.spacer{flex:1}
+
+/* ---- syllable boxes: the core teaching device ---- */
+.boxes{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0}
+.boxes b{
+  width:var(--box);height:var(--box);display:grid;place-items:center;
+  border:1.5px solid var(--ink);font-weight:500;font-size:16px;
+  font-family:"Lexend",sans-serif;
+}
+.boxes.mora b{
+  border-color:var(--rule);color:var(--rule);
+  width:34px;height:34px;font-size:14px;
+  font-family:"Hiragino Sans",sans-serif;
+}
+.count{font-size:12.5px;color:var(--dim);margin:8px 0 2px}
+.count em{font-style:normal;color:var(--shu);font-weight:600}
+
+/* ---- lists ---- */
+.seg{display:flex;gap:6px;margin-bottom:12px}
+.seg button{
+  flex:1;font:inherit;font-size:13px;padding:9px;cursor:pointer;border-radius:0;
+  border:1.5px solid var(--rule-soft);background:transparent;color:var(--dim);
+}
+.seg button[aria-selected="true"]{border-color:var(--ink);color:var(--ink)}
+.warn{border-left:4px solid var(--shu)}
+.warn .word{color:var(--shu)}
+
+/* ---- practice ---- */
+.q{font-size:14px;color:var(--dim);margin-bottom:14px;line-height:1.6}
+.tap{
+  font:inherit;font-size:17px;padding:14px 12px;cursor:pointer;
+  background:transparent;color:var(--ink);border:1.5px solid var(--ink);
+  border-radius:0;width:100%;text-align:left;
+}
+.opts{display:grid;gap:8px}
+.tap.right{background:var(--ok);border-color:var(--ok);color:#fff}
+.tap.wrong{background:var(--shu);border-color:var(--shu);color:#fff}
+.tap:disabled{cursor:default;opacity:.85}
+
+.tiles{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;min-height:52px;
+  border-bottom:1.5px solid var(--rule);padding-bottom:12px;align-items:flex-start}
+.tile{
+  font:inherit;font-size:17px;padding:9px 13px;cursor:pointer;border-radius:0;
+  border:1.5px solid var(--ink);background:transparent;color:var(--ink);
+}
+.tile.used{opacity:.25;pointer-events:none}
+.slotline{min-height:52px;background:linear-gradient(var(--slot),var(--slot)) bottom/100% 3px no-repeat;
+  display:flex;flex-wrap:wrap;gap:7px;padding-bottom:12px;margin-bottom:14px;align-items:flex-start}
+
+.verdict{font-size:15px;margin-top:14px;line-height:1.6}
+.verdict.ok{color:var(--ok)}
+.verdict.no{color:var(--shu)}
+.verdict .fix{display:block;font-size:20px;margin-top:6px}
+
+.score{font-size:12.5px;color:var(--dim);margin-bottom:14px;letter-spacing:.05em}
+.done{text-align:center;padding:30px 0}
+.done p{font-size:17px;margin:0 0 18px}
+
+@media (prefers-reduced-motion:no-preference){
+  .tap.right,.tap.wrong{transition:background .12s ease}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1><span>あ</span>あおさんの練習</h1>
+  <p class="sub" id="stats">1日5分。声を出して言ってみてください。</p>
+</header>
+
+<nav role="tablist">
+  <button role="tab" data-tab="phrases" aria-selected="true">こまった時</button>
+  <button role="tab" data-tab="mora" aria-selected="false">マスの数</button>
+  <button role="tab" data-tab="words" aria-selected="false">ことば</button>
+  <button role="tab" data-tab="drill" aria-selected="false">れんしゅう</button>
+</nav>
+
+<section id="phrases"></section>
+<section id="mora" hidden></section>
+<section id="words" hidden></section>
+<section id="drill" hidden></section>
+
+</div>
+
+<script>
+/* ============================================================
+   DATA — edit freely. This is the only part you need to touch.
+   ============================================================ */
+
+// Survival phrases. These come first so a conversation can't collapse.
+const PHRASES = [
+  ["Again, please.",            "もう一度お願いします"],
+  ["Slowly, please.",           "ゆっくりお願いします"],
+  ["What is this?",             "これは何ですか"],
+  ["How do you say this?",      "これは英語で何と言いますか"],
+  ["I don't know.",             "わかりません（知らない）"],
+  ["I don't understand.",       "意味がわかりません"],
+  ["Please write it.",          "書いてください"],
+  ["One moment, please.",       "ちょっと待ってください"],
+  ["And you?",                  "あなたは？　← 会話が続く魔法の言葉"],
+  ["Thank you.",                "ありがとう"]
+];
+
+// Syllable contrasts. en = English syllables, mora = katakana mora count.
+// This is the pronunciation core: same word, different number of boxes.
+const MORA = [
+  ["strike",   ["strike"],              "ストライク",     ["ス","ト","ラ","イ","ク"]],
+  ["milk",     ["milk"],                "ミルク",         ["ミ","ル","ク"]],
+  ["cheese",   ["cheese"],              "チーズ",         ["チ","ー","ズ"]],
+  ["cake",     ["cake"],                "ケーキ",         ["ケ","ー","キ"]],
+  ["bus",      ["bus"],                 "バス",           ["バ","ス"]],
+  ["juice",    ["juice"],               "ジュース",       ["ジュ","ー","ス"]],
+  ["hotel",    ["ho","tel"],            "ホテル",         ["ホ","テ","ル"]],
+  ["coffee",   ["cof","fee"],           "コーヒー",       ["コ","ー","ヒ","ー"]],
+  ["ticket",   ["tick","et"],           "チケット",       ["チ","ケ","ッ","ト"]],
+  ["taxi",     ["tax","i"],             "タクシー",       ["タ","ク","シ","ー"]],
+  ["table",    ["ta","ble"],            "テーブル",       ["テ","ー","ブ","ル"]],
+  ["Christmas",["Christ","mas"],        "クリスマス",     ["ク","リ","ス","マ","ス"]],
+  ["camera",   ["cam","er","a"],        "カメラ",         ["カ","メ","ラ"]],
+  ["ice cream",["ice","cream"],         "アイスクリーム", ["ア","イ","ス","ク","リ","ー","ム"]]
+];
+
+// SAFE loanwords: the English word means what the katakana means.
+// [english, katakana, syllable count]
+const SAFE = [
+  ["coffee","コーヒー",2],   ["hotel","ホテル",2],      ["camera","カメラ",3],
+  ["table","テーブル",2],    ["bus","バス",1],          ["taxi","タクシー",2],
+  ["banana","バナナ",3],     ["tomato","トマト",3],     ["cheese","チーズ",1],
+  ["milk","ミルク",1],       ["pizza","ピザ",2],        ["salad","サラダ",2],
+  ["guitar","ギター",2],     ["piano","ピアノ",3],      ["tennis","テニス",2],
+  ["ticket","チケット",2],   ["restaurant","レストラン",3], ["cake","ケーキ",1],
+  ["juice","ジュース",1],    ["orange","オレンジ",2],   ["beer","ビール",1],
+  ["wine","ワイン",1],       ["menu","メニュー",2],     ["card","カード",1],
+  ["pen","ペン",1],          ["bag","バッグ",1],        ["coat","コート",1],
+  ["soccer","サッカー",2],   ["chocolate","チョコレート",3], ["sandwich","サンドイッチ",2]
+];
+
+// TRAPS: katakana that is not the English word, or not English at all.
+// Shown for reference only — not drilled yet.
+const TRAPS = [
+  ["マンション","apartment","mansion は大邸宅のこと"],
+  ["コンセント","outlet / socket","consent は「同意」"],
+  ["クレーム","complaint","claim は「主張」"],
+  ["ハンドル","steering wheel","handle は「取っ手」"],
+  ["サービス","free / on the house","service にその意味はない"],
+  ["スマート","slim","smart は「頭がいい」"],
+  ["ナイーブ","gullible","英語では悪口になる"],
+  ["テンション","mood / energy","tension は「緊張」"],
+  ["ノートパソコン","laptop",""],
+  ["パソコン","computer",""],
+  ["スーパー","supermarket","短くしすぎ"],
+  ["コンビニ","convenience store","短くしすぎ"],
+  ["アパート","apartment","短くしすぎ"],
+  ["テレビ","TV / television",""],
+  ["バイキング","buffet","Viking は北欧の海賊"],
+  ["パン","bread","ポルトガル語から。英語ではない"],
+  ["ピアス","earring",""],
+  ["フライドポテト","french fries",""],
+  ["ペットボトル","plastic bottle",""],
+  ["シャーペン","mechanical pencil",""]
+];
+
+// Sentence-building. Frames with one open slot = word order practice
+// without ever explaining word order.
+const SENTENCES = [
+  ["I like coffee.",        "コーヒーが好きです"],
+  ["I like music.",         "音楽が好きです"],
+  ["I want water.",         "水がほしいです"],
+  ["I want a ticket.",      "チケットがほしいです"],
+  ["Do you like tennis?",   "テニスが好きですか"],
+  ["Do you have a menu?",   "メニューはありますか"],
+  ["Where is the hotel?",   "ホテルはどこですか"],
+  ["Where is the bus?",     "バスはどこですか"],
+  ["This is my camera.",    "これは私のカメラです"],
+  ["I don't like tomatoes.","トマトは好きじゃないです"]
+];
+
+const QUESTIONS_PER_ROUND = 12;
+
+/* ============================================================
+   MEMORY
+   Saves to the browser on her own phone. Nothing leaves the device,
+   so there is no server, no account and no privacy question.
+   Falls back to memory-only if storage is blocked (e.g. a preview
+   pane or private browsing) so the app never breaks.
+   ============================================================ */
+const FALLBACK = {};
+const store = {
+  get(k){ try{ const v=localStorage.getItem(k); return v==null?null:JSON.parse(v); }
+          catch(e){ return k in FALLBACK ? FALLBACK[k] : null; } },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }
+            catch(e){ FALLBACK[k]=v; } }
+};
+
+// seen[word] = {n: times asked, wrong: times missed, w: how often to show it}
+let S = store.get("ao-progress") || { seen:{}, days:[], total:0, right:0 };
+const save = ()=>store.set("ao-progress", S);
+
+const today = ()=>new Date().toLocaleDateString("sv");   // YYYY-MM-DD, local time
+function markToday(){
+  const t = today();
+  if(S.days[S.days.length-1] !== t){ S.days.push(t); S.days = S.days.slice(-400); save(); }
+}
+function streak(){
+  let n = 0;
+  const d = new Date();
+  for(;;){
+    const key = d.toLocaleDateString("sv");
+    if(S.days.includes(key)) n++;
+    else if(n > 0 || key !== today()) break;
+    d.setDate(d.getDate()-1);
+    if(n > 399) break;
+  }
+  return n;
+}
+const learned = ()=>Object.values(S.seen).filter(r=>r.w<=1 && r.n>=2).length;
+
+function drawStats(){
+  const total = SAFE.length + SENTENCES.length;
+  document.getElementById("stats").textContent =
+    streak()+"日れんぞく　おぼえた ことば "+learned()+" / "+total;
+}
+
+// Weak items come back more often. Unseen items start at 3.
+function weightOf(k){ const r=S.seen[k]; return r ? r.w : 3; }
+function pickWeighted(list, n, keyOf){
+  const pool = [];
+  list.forEach(it=>{ const w=weightOf(keyOf(it)); for(let i=0;i<w;i++) pool.push(it); });
+  const out=[], used=new Set();
+  shuffle(pool).forEach(it=>{
+    const k = keyOf(it);
+    if(out.length<n && !used.has(k)){ used.add(k); out.push(it); }
+  });
+  return out;
+}
+function record(key, right){
+  const r = S.seen[key] || {n:0,wrong:0,w:3};
+  r.n++;
+  if(right) r.w = Math.max(1, r.w-1);
+  else { r.wrong++; r.w = Math.min(8, r.w+3); }
+  S.seen[key] = r;
+  S.total++; if(right) S.right++;
+  markToday(); save(); drawStats();
+}
+
+/* ============================================================
+   SPEECH — browser built-in, no API key, works on GitHub Pages
+   ============================================================ */
+let voice = null;
+function pickVoice(){
+  const vs = speechSynthesis.getVoices().filter(v=>v.lang.startsWith("en"));
+  voice = vs.find(v=>/Samantha|Karen|Daniel|Google US/.test(v.name))
+       || vs.find(v=>v.lang==="en-US") || vs[0] || null;
+}
+pickVoice();
+speechSynthesis.onvoiceschanged = pickVoice;
+
+function say(text, rate){
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "en-US";
+  u.rate = rate || 0.85;
+  if(voice) u.voice = voice;
+  speechSynthesis.speak(u);
+}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const el = (t,c,x)=>{const n=document.createElement(t); if(c)n.className=c; if(x!=null)n.textContent=x; return n;};
+const shuffle = a => a.map(v=>[Math.random(),v]).sort((p,q)=>p[0]-q[0]).map(p=>p[1]);
+const sample  = (a,n,not) => shuffle(a.filter(x=>x!==not)).slice(0,n);
+function sayBtn(text,label,rate,cls){
+  const b = el("button","say"+(cls?" "+cls:""),label);
+  b.onclick = ()=>say(text,rate);
+  return b;
+}
+
+/* ============================================================
+   TAB 1 — survival phrases
+   ============================================================ */
+function buildPhrases(){
+  const host = document.getElementById("phrases");
+  host.innerHTML = "";
+  const lead = el("p","q","会話が止まった時に使う言葉です。まずこの10個だけ覚えてください。");
+  host.appendChild(lead);
+  PHRASES.forEach(([en,jp])=>{
+    const c = el("div","card");
+    const w = el("div","word en",en);
+    const g = el("div","gloss",jp);
+    const r = el("div","row");
+    r.appendChild(sayBtn(en,"聞く",0.85));
+    r.appendChild(sayBtn(en,"ゆっくり",0.5,"slow"));
+    c.append(w,g,r);
+    host.appendChild(c);
+  });
+}
+
+/* ============================================================
+   TAB 2 — syllable boxes (English) vs mora boxes (katakana)
+   ============================================================ */
+function buildMora(){
+  const host = document.getElementById("mora");
+  host.innerHTML = "";
+  host.appendChild(el("p","q",
+    "同じ言葉なのに、マスの数がちがいます。英語のマスの数で言ってください。手をたたきながら練習すると早いです。"));
+  MORA.forEach(([en,syl,kata,mora])=>{
+    const c = el("div","card");
+    c.appendChild(el("div","word en",en));
+
+    const bEn = el("div","boxes");
+    syl.forEach(s=>bEn.appendChild(el("b",null,s)));
+    c.appendChild(bEn);
+
+    const n = el("div","count");
+    n.innerHTML = "英語 <em>"+syl.length+"</em> マス　／　"+kata+" は "+mora.length+" マス";
+    c.appendChild(n);
+
+    const bJa = el("div","boxes mora");
+    mora.forEach(s=>bJa.appendChild(el("b",null,s)));
+    c.appendChild(bJa);
+
+    const r = el("div","row");
+    r.appendChild(sayBtn(en,"聞く",0.85));
+    r.appendChild(sayBtn(en,"ゆっくり",0.5,"slow"));
+    c.appendChild(r);
+    host.appendChild(c);
+  });
+}
+
+/* ============================================================
+   TAB 3 — vocabulary, split into safe and trap
+   ============================================================ */
+function buildWords(){
+  const host = document.getElementById("words");
+  host.innerHTML = "";
+  const seg = el("div","seg");
+  const bA = el("button",null,"そのまま使える");
+  const bB = el("button",null,"気をつける");
+  seg.append(bA,bB);
+  const list = el("div");
+  host.append(seg,list);
+
+  function safeView(){
+    bA.setAttribute("aria-selected","true"); bB.setAttribute("aria-selected","false");
+    list.innerHTML = "";
+    list.appendChild(el("p","q","カタカナと同じ意味です。発音だけ気をつけてください。"));
+    SAFE.forEach(([en,ka])=>{
+      const c = el("div","card");
+      c.appendChild(el("div","word en",en));
+      c.appendChild(el("div","gloss",ka));
+      const r = el("div","row");
+      r.appendChild(sayBtn(en,"聞く",0.85));
+      r.appendChild(sayBtn(en,"ゆっくり",0.5,"slow"));
+      c.appendChild(r);
+      list.appendChild(c);
+    });
+  }
+  function trapView(){
+    bA.setAttribute("aria-selected","false"); bB.setAttribute("aria-selected","true");
+    list.innerHTML = "";
+    list.appendChild(el("p","q","このカタカナは英語では通じません。右が本当の英語です。"));
+    TRAPS.forEach(([ka,en,note])=>{
+      const c = el("div","card warn");
+      c.appendChild(el("div","gloss",ka));
+      c.appendChild(el("div","word en",en));
+      if(note) c.appendChild(el("div","gloss",note));
+      const r = el("div","row");
+      r.appendChild(sayBtn(en,"聞く",0.85));
+      c.appendChild(r);
+      list.appendChild(c);
+    });
+  }
+  bA.onclick = safeView; bB.onclick = trapView;
+  safeView();
+}
+
+/* ============================================================
+   TAB 4 — practice with automatic correction
+   ============================================================ */
+let queue = [], idx = 0, score = 0;
+
+function makeQuestions(){
+  const q = [];
+
+  const byWord = w=>w[0];
+  const bySent = s=>s[0];
+
+  // listen and choose
+  pickWeighted(SAFE,4,byWord).forEach(w=>{
+    q.push({kind:"listen", key:w[0], answer:w[0],
+      options:shuffle([w[0], ...sample(SAFE,2,w).map(x=>x[0])]),
+      prompt:"聞こえた言葉はどれですか"});
+  });
+
+  // meaning to English
+  pickWeighted(SAFE,3,byWord).forEach(w=>{
+    q.push({kind:"choose", key:w[0], answer:w[0],
+      options:shuffle([w[0], ...sample(SAFE,2,w).map(x=>x[0])]),
+      prompt:"「"+w[1]+"」は英語でどれですか"});
+  });
+
+  // syllable count
+  pickWeighted(SAFE,2,byWord).forEach(w=>{
+    q.push({kind:"count", key:w[0], answer:String(w[2]),
+      options:["1","2","3","4"],
+      word:w[0], prompt:"英語で何マスですか"});
+  });
+
+  // word order
+  pickWeighted(SENTENCES,3,bySent).forEach(([en,jp])=>{
+    q.push({kind:"order", key:en, answer:en, jp:jp,
+      prompt:"「"+jp+"」　単語をタップして文を作ってください"});
+  });
+
+  return shuffle(q).slice(0,QUESTIONS_PER_ROUND);
+}
+
+function startRound(){
+  queue = makeQuestions(); idx = 0; score = 0;
+  renderQuestion();
+}
+
+function renderQuestion(){
+  const host = document.getElementById("drill");
+  host.innerHTML = "";
+
+  if(idx >= queue.length){
+    const d = el("div","done");
+    d.appendChild(el("p", null, queue.length+"問中 "+score+"問 せいかい"));
+    d.appendChild(el("p","gloss","ぜんぶで "+S.right+" / "+S.total+" 問"));
+    const again = el("button","say","もう一度");
+    again.onclick = startRound;
+    d.appendChild(again);
+    const row = el("div","row");
+    const reset = el("button","say slow","記録を消す");
+    reset.onclick = ()=>{
+      if(!confirm("今までの記録を全部消しますか？")) return;
+      S = {seen:{},days:[],total:0,right:0}; save(); drawStats(); startRound();
+    };
+    row.appendChild(el("span","spacer")); row.appendChild(reset);
+    d.appendChild(row);
+    host.appendChild(d);
+    return;
+  }
+
+  const q = queue[idx];
+  host.appendChild(el("div","score", (idx+1)+" / "+queue.length));
+  const card = el("div","card");
+  card.appendChild(el("div","q",q.prompt));
+
+  if(q.kind === "listen"){
+    const r = el("div","row");
+    r.appendChild(sayBtn(q.answer,"もう一度聞く",0.8));
+    r.appendChild(sayBtn(q.answer,"ゆっくり",0.5,"slow"));
+    card.appendChild(r);
+    card.appendChild(el("div",null," "));
+    say(q.answer, 0.8);
+    card.appendChild(optionList(q));
+  }
+  else if(q.kind === "count"){
+    card.appendChild(el("div","word en",q.word));
+    const r = el("div","row");
+    r.appendChild(sayBtn(q.word,"聞く",0.75));
+    card.appendChild(r);
+    card.appendChild(el("div",null," "));
+    card.appendChild(optionList(q));
+  }
+  else if(q.kind === "choose"){
+    card.appendChild(optionList(q));
+  }
+  else if(q.kind === "order"){
+    card.appendChild(orderWidget(q, card));
+  }
+
+  host.appendChild(card);
+}
+
+function optionList(q){
+  const box = el("div","opts");
+  q.options.forEach(opt=>{
+    const b = el("button","tap en",opt);
+    b.onclick = ()=>{
+      const right = opt === q.answer;
+      [...box.children].forEach(c=>c.disabled = true);
+      b.classList.add(right ? "right" : "wrong");
+      if(!right) [...box.children].forEach(c=>{ if(c.textContent===q.answer) c.classList.add("right"); });
+      finish(q, right, q.kind==="count" ? null : q.answer, box.parentElement);
+    };
+    box.appendChild(b);
+  });
+  return box;
+}
+
+function orderWidget(q, card){
+  const holder = el("div");
+  const line = el("div","slotline");
+  const pool = el("div","tiles");
+  const words = q.answer.replace(/([.?])$/,"").split(" ");
+  const punct = q.answer.slice(-1);
+  let built = [];
+
+  shuffle(words.slice()).forEach(w=>{
+    const t = el("button","tile en",w);
+    t.onclick = ()=>{
+      t.classList.add("used");
+      built.push(w);
+      const c = el("button","tile en",w);
+      c.onclick = ()=>{
+        c.remove(); t.classList.remove("used");
+        built.splice(built.indexOf(w),1);
+        check.disabled = built.length !== words.length;
+      };
+      line.appendChild(c);
+      check.disabled = built.length !== words.length;
+    };
+    pool.appendChild(t);
+  });
+
+  const check = el("button","say","答え合わせ");
+  check.disabled = true;
+  check.onclick = ()=>{
+    const made = built.join(" ") + punct;
+    const right = made.toLowerCase() === q.answer.toLowerCase();
+    [...line.children].forEach(c=>c.disabled=true);
+    [...pool.children].forEach(c=>c.classList.add("used"));
+    check.remove();
+    finish(q, right, q.answer, holder);
+  };
+
+  holder.append(line, pool, check);
+  return holder;
+}
+
+function finish(q, right, correctText, host){
+  if(right) score++;
+  record(q.key, right);
+  const v = el("div","verdict "+(right?"ok":"no"));
+  v.textContent = right ? "せいかい" : "ちがいます";
+  if(!right && correctText){
+    const f = el("span","fix en", correctText);
+    v.appendChild(f);
+  }
+  host.appendChild(v);
+
+  if(correctText) say(correctText, right ? 0.85 : 0.65);
+
+  const next = el("button","say", idx+1 >= queue.length ? "けっか" : "次へ");
+  next.onclick = ()=>{ idx++; renderQuestion(); };
+  const row = el("div","row");
+  if(correctText) row.appendChild(sayBtn(correctText,"聞く",0.75));
+  row.appendChild(el("span","spacer"));
+  row.appendChild(next);
+  host.appendChild(row);
+  next.focus();
+}
+
+/* ============================================================
+   TABS
+   ============================================================ */
+const tabs = [...document.querySelectorAll("nav button")];
+tabs.forEach(t=>{
+  t.onclick = ()=>{
+    tabs.forEach(o=>o.setAttribute("aria-selected", String(o===t)));
+    ["phrases","mora","words","drill"].forEach(id=>{
+      document.getElementById(id).hidden = (id !== t.dataset.tab);
+    });
+    if(t.dataset.tab === "drill") startRound();
+    window.scrollTo(0,0);
+  };
+});
+
+markToday();
+drawStats();
+buildPhrases();
+buildMora();
+buildWords();
+</script>
+</body>
+</html>
