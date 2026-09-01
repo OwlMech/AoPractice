@@ -74,6 +74,16 @@ nav button:focus-visible,.tap:focus-visible,.say:focus-visible{outline:2.5px sol
 
 section[hidden]{display:none}
 
+.notice{
+  border:1.5px solid var(--shu);border-left-width:5px;
+  padding:14px;margin-bottom:18px;font-size:13.5px;line-height:1.7;
+}
+.notice strong{display:block;font-size:15px;margin-bottom:6px;font-weight:600}
+.notice .say{margin-top:12px;border-color:var(--shu);color:var(--shu);width:100%;
+  font-size:16px;padding:14px}
+.notice.install{border-color:var(--rule)}
+.notice.install .say{border-color:var(--ink);color:var(--paper);background:var(--ink)}
+
 .card{
   border:1.5px solid var(--rule);background:var(--paper);
   padding:16px;margin-bottom:10px;
@@ -159,6 +169,8 @@ section[hidden]{display:none}
   <h1><span>あ</span>あおさんの練習</h1>
   <p class="sub" id="stats">1日5分。声を出して言ってみてください。</p>
 </header>
+
+<div id="notice"></div>
 
 <nav role="tablist">
   <button role="tab" data-tab="phrases" aria-selected="true">こまった時</button>
@@ -661,6 +673,65 @@ tabs.forEach(t=>{
     window.scrollTo(0,0);
   };
 });
+
+/* ============================================================
+   INSTALL + OFFLINE
+   Android Chrome will offer to install this as an app. We catch that
+   offer and put it behind one big Japanese button, so she never has
+   to find a browser menu. Once installed it opens from the home
+   screen like any other app and runs with no connection.
+   ============================================================ */
+const notice = document.getElementById("notice");
+
+function showNotice(cls, title, body, btnLabel, onClick){
+  const n = el("div","notice"+(cls?" "+cls:""));
+  n.appendChild(el("strong",null,title));
+  n.appendChild(el("div",null,body));
+  if(btnLabel){
+    const b = el("button","say",btnLabel);
+    b.onclick = ()=>onClick(n);
+    n.appendChild(b);
+  }
+  notice.appendChild(n);
+  return n;
+}
+
+let installEvent = null;
+window.addEventListener("beforeinstallprompt", e=>{
+  e.preventDefault();
+  installEvent = e;
+  showNotice("install",
+    "ホーム画面に入れましょう",
+    "下のボタンを押すと、このアプリがホーム画面に置かれます。次からはそのアイコンを押すだけです。",
+    "ホーム画面に入れる",
+    async (n)=>{
+      n.remove();
+      installEvent.prompt();
+      await installEvent.userChoice;
+      installEvent = null;
+    });
+});
+
+if("serviceWorker" in navigator && location.protocol === "https:"){
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
+
+/* Japanese phones often ship without English speech data installed.
+   That would make the app silent, so check and say so plainly. */
+let voiceChecked = false;
+function checkVoice(){
+  if(voiceChecked) return;
+  const list = speechSynthesis.getVoices();
+  if(!list.length) return;                       // not loaded yet
+  voiceChecked = true;
+  if(list.some(v=>v.lang.startsWith("en"))) return;
+  showNotice(null,
+    "英語の音声が入っていません",
+    "設定 → ユーザー補助 → テキスト読み上げの設定 → Google テキスト読み上げエンジン → 言語データのインストール → English を入れてください。",
+    null, null);
+}
+speechSynthesis.addEventListener("voiceschanged", ()=>{ pickVoice(); checkVoice(); });
+setTimeout(checkVoice, 2000);
 
 markToday();
 drawStats();
